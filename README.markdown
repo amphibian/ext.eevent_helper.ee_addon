@@ -4,7 +4,7 @@ Once activiated, when entries are published in your specified "events" weblog, t
 
 You can also specify a custom *Start Date* field to use instead of the *Entry Date* calendar from the **Date** tab. Once you specify this field, you can automatically set the *Entry Date* to match the custom *Start Date field*, eliminating the need for the **Date** tab altogether.  This way, you and your clients can use friendlier custom date fields for both start and end dates, while always keeping the entry's *Entry Date* and *Expiration Date* set properly for use in `exp:weblog:entries` tag parameters.
 
-Lastly, you can force the *Start Date* and *End Date* fields to have their time set to 00:00:00 upon publishing.
+Optionally, you can force the *Start Date* and *End Date* fields to have their time set to 00:00:00 upon publishing; and remove the date localization toggle from the custom date fields.
 
 Note that only fields of the built-in ExpressionEngine "Date" fieldtype can be selected as *Start Date* or *End Date* fields.
 

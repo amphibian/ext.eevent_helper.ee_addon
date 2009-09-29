@@ -1,10 +1,15 @@
 <?php
 
+if(!defined('EXT'))
+{
+	exit('Invalid file request');
+}
+
 class Eevent_helper
 {
 	var $settings        = array();
 	var $name            = 'EEvent Helper';
-	var $version         = '1.0.0';
+	var $version         = '1.0.1';
 	var $description     = 'Automatically sets the expiration date for event entries, and more.';
 	var $settings_exist  = 'y';
 	var $docs_url        = '';
@@ -57,6 +62,8 @@ class Eevent_helper
 	    $settings['end_date_field'] = array('s', $end_field, NULL);
 	    $settings['clone_date'] = array('r', array('yes' => 'yes', 'no' => 'no'), 'no');
 	    $settings['midnight'] = array('r', array('yes' => 'yes', 'no' => 'no'), 'no');
+	    $settings['remove_localization'] = array('r', array('yes' => 'yes', 'no' => 'no'), 'yes');
+	    $settings['default_localization'] = array('r', array('n' => 'Fixed', 'y' => 'Localized'), 'n');
 	    
 	    return $settings;
 	}
@@ -70,21 +77,25 @@ class Eevent_helper
 	function set_dates() {
 		
 		// Check to see if we're in our events weblog
-		if($_POST['weblog_id'] == $this->settings['event_weblog']) {
-		
+		if($_POST['weblog_id'] == $this->settings['event_weblog'])
+		{
 			// Are we zeroing the time?
-			if($this->settings['midnight'] == 'yes') {
-			
+			if($this->settings['midnight'] == 'yes')
+			{
 				// Zero the appropriate start date
-				if($this->settings['start_date_field'] && $_POST[$this->settings['start_date_field']]) {
+				if($this->settings['start_date_field'] && $_POST[$this->settings['start_date_field']])
+				{
 					$_POST[$this->settings['start_date_field']] = 
 					substr($_POST[$this->settings['start_date_field']], 0, 10) . ' 00:00:00';
-				} else {
+				}
+				else
+				{
 					$_POST['entry_date'] = substr($_POST['entry_date'], 0, 10) . ' 00:00:00';
 				}
 				
 				// Zero the end date if applicable
-				if($this->settings['end_date_field'] && $_POST[$this->settings['end_date_field']]) {
+				if($this->settings['end_date_field'] && $_POST[$this->settings['end_date_field']])
+				{
 					$_POST[$this->settings['end_date_field']] = 
 					substr($_POST[$this->settings['end_date_field']], 0, 10) . ' 00:00:00';
 				}
@@ -101,8 +112,11 @@ class Eevent_helper
 			{ 
 				if($this->settings['start_date_field']) // We're using a custom start date
 				{
-					$_POST['expiration_date'] = 
-					substr($_POST[$this->settings['start_date_field']], 0, 10) . ' 23:59:59';
+					if($_POST[$this->settings['start_date_field']])
+					{
+						$_POST['expiration_date'] = 
+						substr($_POST[$this->settings['start_date_field']], 0, 10) . ' 23:59:59';
+					}
 				}
 				else // We're using the entry_date
 				{
@@ -111,14 +125,40 @@ class Eevent_helper
 			}
 			
 			// Clone start date to entry date
-			if($this->settings['clone_date'] && $this->settings['start_date_field'] && $_POST[$this->settings['start_date_field']])
+			if($this->settings['clone_date'] == 'yes' && $this->settings['start_date_field'] && $_POST[$this->settings['start_date_field']])
 			{
 				$_POST['entry_date'] = $_POST[$this->settings['start_date_field']];
 			}
 		}	
 	}	
     // END
-   
+
+
+	// --------------------------------
+	//  Remove date localization toggle
+	// -------------------------------- 
+	    
+	function remove_localization($out)
+	{
+
+		global $EXT;
+		if ($EXT->last_call !== FALSE)
+		{
+			$out = $EXT->last_call;
+		}
+
+		if($this->settings['remove_localization'] == 'yes')
+		{
+			// Regex courtesy of Lodewijk Schutte from his Low CP extension
+			return preg_replace('/<select name=\'(field_offset_\d+)\'.*?<\/select>/is','<input type="hidden" name="$1" value="' . $this->settings['default_localization'] . '" />', $out);
+		}
+		else 
+		{
+			return $out;
+		}
+	}   
+	// END 
+	
    
 	// --------------------------------
 	//  Activate Extension
@@ -134,6 +174,20 @@ class Eevent_helper
 		        'class'        => "Eevent_helper",
 		        'method'       => "set_dates",
 		        'hook'         => "submit_new_entry_start",
+		        'settings'     => "",
+		        'priority'     => 10,
+		        'version'      => $this->version,
+		        'enabled'      => "y"
+				)
+			)
+		);
+		
+	    $DB->query($DB->insert_string('exp_extensions',
+	    	array(
+				'extension_id' => '',
+		        'class'        => "Eevent_helper",
+		        'method'       => "remove_localization",
+		        'hook'         => "show_full_control_panel_end",
 		        'settings'     => "",
 		        'priority'     => 10,
 		        'version'      => $this->version,
@@ -160,13 +214,20 @@ class Eevent_helper
 	    
 	    if ($current < '1.0.1')
 	    {
-	        // Update to next version 1.0.1
-	    }
-	    
-	    if ($current < '1.0.2')
-	    {
-	        // Update to next version 1.0.2
-	    }
+		    $DB->query($DB->insert_string('exp_extensions',
+		    	array(
+					'extension_id' => '',
+			        'class'        => "Eevent_helper",
+			        'method'       => "remove_localization",
+			        'hook'         => "show_full_control_panel_end",
+			        'settings'     => "",
+			        'priority'     => 10,
+			        'version'      => $this->version,
+			        'enabled'      => "y"
+					)
+				)
+			);
+		}
 	    
 	    $DB->query("UPDATE exp_extensions 
 	                SET version = '".$DB->escape_str($this->version)."' 

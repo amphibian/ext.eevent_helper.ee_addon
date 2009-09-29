@@ -9,6 +9,10 @@ $L = array(
 'end_date_field' => 'Choose an End Date field',
 'clone_date' => 'Clone custom Start Date to Entry Date?',
 'midnight' => 'Set the time to midnight?',
+'remove_localization' => 'Remove localization options?',
+'default_localization' => 'Default localization setting',
 'yes' => 'Yes',
-'no' => 'No'
+'no' => 'No',
+'Fixed' => 'Fixed',
+'Localized' => 'Localized'
 );
