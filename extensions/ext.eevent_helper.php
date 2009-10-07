@@ -9,7 +9,7 @@ class Eevent_helper
 {
 	var $settings        = array();
 	var $name            = 'EEvent Helper';
-	var $version         = '1.0.1';
+	var $version         = '1.0.2';
 	var $description     = 'Automatically sets the expiration date for event entries, and more.';
 	var $settings_exist  = 'y';
 	var $docs_url        = '';
@@ -135,7 +135,7 @@ class Eevent_helper
 
 
 	// --------------------------------
-	//  Remove date localization toggle
+	//  Contorl panel changes
 	// -------------------------------- 
 	    
 	function remove_localization($out)
@@ -147,15 +147,31 @@ class Eevent_helper
 			$out = $EXT->last_call;
 		}
 
+		// Remove the localization toggle
 		if($this->settings['remove_localization'] == 'yes')
 		{
 			// Regex courtesy of Lodewijk Schutte from his Low CP extension
-			return preg_replace('/<select name=\'(field_offset_\d+)\'.*?<\/select>/is','<input type="hidden" name="$1" value="' . $this->settings['default_localization'] . '" />', $out);
+			$out = preg_replace('/<select name=\'(field_offset_\d+)\'.*?<\/select>/is', '<input type="hidden" name="$1" value="' . $this->settings['default_localization'] . '" />', $out);
 		}
-		else 
+		
+		
+		// Ignore the time if specified
+		if( ($_GET['M'] == 'entry_form' || $_GET['M'] == 'edit_entry') && $_GET['weblog_id'] == $this->settings['event_weblog'] && $this->settings['midnight'] == 'yes')
 		{
-			return $out;
-		}
+			$targets[] = "fval.value = cal.date_str('y');";
+			$replacements[] = "fval.value = cal.date_str('n');";
+			
+			$targets[] = "new_date = cal.date_str('n') + time;";
+			$replacements[] = "new_date = cal.date_str('n');";
+			
+			$targets[] = "maxlength='23'";
+			$replacements[] = "maxlength='10'";			
+
+			$out = str_replace($targets, $replacements, $out);
+		}		
+			
+		return $out;
+		
 	}   
 	// END 
 	
