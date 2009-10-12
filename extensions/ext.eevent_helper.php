@@ -155,19 +155,38 @@ class Eevent_helper
 		}
 		
 		
-		// Ignore the time if specified
+		// Hide the time if specified
 		if( ($_GET['M'] == 'entry_form' || $_GET['M'] == 'edit_entry') && $_GET['weblog_id'] == $this->settings['event_weblog'] && $this->settings['midnight'] == 'yes')
 		{
-			$targets[] = "fval.value = cal.date_str('y');";
-			$replacements[] = "fval.value = cal.date_str('n');";
-			
-			$targets[] = "new_date = cal.date_str('n') + time;";
-			$replacements[] = "new_date = cal.date_str('n');";
-			
-			$targets[] = "maxlength='23'";
-			$replacements[] = "maxlength='10'";			
+			$target = "</head>";
+			$js = '
+			<script type="text/javascript">
+			<!-- Added by EEvent Helper -->
+			$(document).ready(function()
+				{
+				';
+			if($this->settings['start_date_field'])
+			{
+				$js .= '$("input[name='.$this->settings['start_date_field'].']").attr("maxlength", "10")
+				';
+			}
+			else
+			{
+				$js .= '$("input[name=entry_date]").attr("maxlength", "10")
+				';
+			}
+			if($this->settings['end_date_field'])
+			{
+				$js .= '$("input[name='.$this->settings['end_date_field'].']").attr("maxlength", "10")
+				';
+			}
+			$js .= '}
+			);
+			</script>
+			</head>
+			';			
 
-			$out = str_replace($targets, $replacements, $out);
+			$out = str_replace($target, $js, $out);
 		}		
 			
 		return $out;
