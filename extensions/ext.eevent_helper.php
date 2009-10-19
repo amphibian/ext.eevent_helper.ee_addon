@@ -156,7 +156,7 @@ class Eevent_helper
 		
 		
 		// Hide the time if specified
-		if( ($_GET['M'] == 'entry_form' || $_GET['M'] == 'edit_entry') && $_GET['weblog_id'] == $this->settings['event_weblog'] && $this->settings['midnight'] == 'yes')
+		if( isset($_GET['M']) && ($_GET['M'] == 'entry_form' || $_GET['M'] == 'edit_entry') && isset($_GET['weblog_id']) && $_GET['weblog_id'] == $this->settings['event_weblog'] && $this->settings['midnight'] == 'yes')
 		{
 			$target = "</head>";
 			$js = '
