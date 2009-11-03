@@ -12,7 +12,7 @@ class Eevent_helper
 	var $version         = '1.0.3';
 	var $description     = 'Automatically sets the expiration date for event entries, and more.';
 	var $settings_exist  = 'y';
-	var $docs_url        = '';
+	var $docs_url        = 'http://github.com/amphibian/ext.eevent_helper.ee_addon';
 
 	
 	// -------------------------------
