@@ -9,7 +9,7 @@ class Eevent_helper
 {
 	var $settings        = array();
 	var $name            = 'EEvent Helper';
-	var $version         = '1.0.3';
+	var $version         = '1.0.4';
 	var $description     = 'Automatically sets the expiration date for event entries, and more.';
 	var $settings_exist  = 'y';
 	var $docs_url        = 'http://github.com/amphibian/ext.eevent_helper.ee_addon';
@@ -70,70 +70,77 @@ class Eevent_helper
 	// END
 	
 	
-	// --------------------------------
-	//  Do the stuff
-	// --------------------------------  	
+	function is_event_weblog()
+	{
+		global $IN;
+		// Have we saved our settings?
+		if(!empty($this->settings))
+		{
+			// Are we on a publish screen, and in our events weblog?
+			if($IN->GBL('M') == ('entry_form' || 'new_entry' || 'edit_entry')
+			&& $IN->GBL('weblog_id') == $this->settings['event_weblog'])
+			{
+				return TRUE;
+			}
+		}
+	}	
+	
 	
 	function set_dates() {
 		
-		// First, check to see that we have settings
-		if($this->settings)
+		if($this->is_event_weblog())
 		{
-			// Check to see if we're in our events weblog
-			if($_POST['weblog_id'] == $this->settings['event_weblog'])
+			// Are we zeroing the time?
+			if($this->settings['midnight'] == 'yes')
 			{
-				// Are we zeroing the time?
-				if($this->settings['midnight'] == 'yes')
+				// Zero the appropriate start date
+				if($this->settings['start_date_field'] && $_POST[$this->settings['start_date_field']])
 				{
-					// Zero the appropriate start date
-					if($this->settings['start_date_field'] && $_POST[$this->settings['start_date_field']])
-					{
-						$_POST[$this->settings['start_date_field']] = 
-						substr($_POST[$this->settings['start_date_field']], 0, 10) . ' 00:00:00';
-					}
-					else
-					{
-						$_POST['entry_date'] = substr($_POST['entry_date'], 0, 10) . ' 00:00:00';
-					}
-					
-					// Zero the end date if applicable
-					if($this->settings['end_date_field'] && $_POST[$this->settings['end_date_field']])
-					{
-						$_POST[$this->settings['end_date_field']] = 
-						substr($_POST[$this->settings['end_date_field']], 0, 10) . ' 00:00:00';
-					}
-				}
-			
-				// Set the expiration date
-				if($this->settings['end_date_field'] && 
-				$_POST[$this->settings['end_date_field']]) // We're using an end date
-				{ 
-					$_POST['expiration_date'] = 
-					substr($_POST[$this->settings['end_date_field']], 0, 10) . ' 23:59:59';
+					$_POST[$this->settings['start_date_field']] = 
+					substr($_POST[$this->settings['start_date_field']], 0, 10) . ' 00:00:00';
 				}
 				else
-				{ 
-					if($this->settings['start_date_field']) // We're using a custom start date
-					{
-						if($_POST[$this->settings['start_date_field']])
-						{
-							$_POST['expiration_date'] = 
-							substr($_POST[$this->settings['start_date_field']], 0, 10) . ' 23:59:59';
-						}
-					}
-					else // We're using the entry_date
-					{
-					$_POST['expiration_date'] = substr($_POST['entry_date'], 0, 10) . ' 23:59:59';
-					}
+				{
+					$_POST['entry_date'] = substr($_POST['entry_date'], 0, 10) . ' 00:00:00';
 				}
 				
-				// Clone start date to entry date
-				if($this->settings['clone_date'] == 'yes' && $this->settings['start_date_field'] && $_POST[$this->settings['start_date_field']])
+				// Zero the end date if applicable
+				if($this->settings['end_date_field'] && $_POST[$this->settings['end_date_field']])
 				{
-					$_POST['entry_date'] = $_POST[$this->settings['start_date_field']];
+					$_POST[$this->settings['end_date_field']] = 
+					substr($_POST[$this->settings['end_date_field']], 0, 10) . ' 00:00:00';
 				}
-			}	
-		}
+			}
+		
+			// Set the expiration date
+			if($this->settings['end_date_field'] && 
+			$_POST[$this->settings['end_date_field']]) // We're using an end date
+			{ 
+				$_POST['expiration_date'] = 
+				substr($_POST[$this->settings['end_date_field']], 0, 10) . ' 23:59:59';
+			}
+			else
+			{ 
+				if($this->settings['start_date_field']) // We're using a custom start date
+				{
+					if($_POST[$this->settings['start_date_field']])
+					{
+						$_POST['expiration_date'] = 
+						substr($_POST[$this->settings['start_date_field']], 0, 10) . ' 23:59:59';
+					}
+				}
+				else // We're using the entry_date
+				{
+				$_POST['expiration_date'] = substr($_POST['entry_date'], 0, 10) . ' 23:59:59';
+				}
+			}
+			
+			// Clone start date to entry date
+			if($this->settings['clone_date'] == 'yes' && $this->settings['start_date_field'] && $_POST[$this->settings['start_date_field']])
+			{
+				$_POST['entry_date'] = $_POST[$this->settings['start_date_field']];
+			}
+		}	
 	}	
     // END
 
@@ -151,8 +158,7 @@ class Eevent_helper
 			$out = $EXT->last_call;
 		}
 
-		// First, check to see that we have settings
-		if($this->settings)
+		if($this->is_event_weblog())
 		{
 			// Remove the localization toggle
 			if($this->settings['remove_localization'] == 'yes')
@@ -163,7 +169,7 @@ class Eevent_helper
 			
 			
 			// Hide the time if specified
-			if( isset($_GET['M']) && ($_GET['M'] == 'entry_form' || $_GET['M'] == 'edit_entry') && isset($_GET['weblog_id']) && $_GET['weblog_id'] == $this->settings['event_weblog'] && $this->settings['midnight'] == 'yes')
+			if($this->settings['midnight'] == 'yes')
 			{
 				$target = "</head>";
 				$js = '
@@ -172,19 +178,22 @@ class Eevent_helper
 				$(document).ready(function()
 					{
 					';
-				if($this->settings['start_date_field'])
+				if($start = $this->settings['start_date_field'])
 				{
-					$js .= '$("input[name='.$this->settings['start_date_field'].']").attr("maxlength", "10")
+					$js .= '$("input[name='.$start.']").attr("maxlength", "10")
+                    $("input[name='.$start.']").val($("input[name='.$start.']").val().substr(0,10));
 					';
 				}
 				else
 				{
 					$js .= '$("input[name=entry_date]").attr("maxlength", "10")
+                    $("input[name=entry_date]").val($("input[name=entry_date]").val().substr(0,10));
 					';
 				}
-				if($this->settings['end_date_field'])
+				if($end = $this->settings['end_date_field'])
 				{
-					$js .= '$("input[name='.$this->settings['end_date_field'].']").attr("maxlength", "10")
+					$js .= '$("input[name='.$end.']").attr("maxlength", "10")
+                    $("input[name='.$end.']").val($("input[name='.$end.']").val().substr(0,10));
 					';
 				}
 				$js .= '}
