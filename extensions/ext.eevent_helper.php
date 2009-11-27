@@ -9,10 +9,11 @@ class Eevent_helper
 {
 	var $settings        = array();
 	var $name            = 'EEvent Helper';
-	var $version         = '1.1';
+	var $version         = '1.2';
 	var $description     = 'Automatically sets the expiration date for event entries, and more.';
 	var $settings_exist  = 'y';
 	var $docs_url        = 'http://github.com/amphibian/ext.eevent_helper.ee_addon';
+	var $debug			 = 'n';
 
 	
 	// -------------------------------
@@ -32,26 +33,34 @@ class Eevent_helper
 	
 	function settings_form($current)
 	{	    
-		global $DB, $DSP, $LANG, $IN;
+		global $DB, $DSP, $IN, $LANG, $PREFS;
 		
-		// Get a list of weblogs
-		$weblogs = array('--' => '--');
-		$query = $DB->query("SELECT blog_title, weblog_id FROM exp_weblogs ORDER BY blog_title ASC");
-		if($query->num_rows > 0) {
-			foreach($query->result as $value) {
-				$weblogs[$value['weblog_id']] = $value['blog_title'];
-			}
+		if($this->debug == 'y')
+		{
+			print '<pre>';
+			print_r($current);
+			print '</pre>';
 		}
 		
-		// Get a list of date fields
-		$fields = array();
-		$query = $DB->query("SELECT w.field_group, w.blog_title, f.field_id, f.field_label FROM exp_weblogs as w, exp_weblog_fields as f WHERE w.field_group = f.group_id AND f.field_type = 'date'ORDER BY w.blog_title ASC,f.field_order ASC");
-		if($query->num_rows > 0) {
-			foreach($query->result as $value) {
-				$fields['field_id_' . $value['field_id']] = $value['blog_title'] . ': ' . $value['field_label'];
-			}
-		}		
+		$site = $PREFS->ini('site_id');
+						
+		// Get a list of weblogs for the current site
+		$weblogs = $DB->query("SELECT blog_title, weblog_id 
+			FROM exp_weblogs 
+			WHERE site_id = '".$DB->escape_str($site)."' 
+			ORDER BY blog_title ASC");
 		
+		// Get a list of date fields for the current site
+		$fields = $DB->query("SELECT w.blog_title, f.field_id, f.field_label 
+			FROM exp_weblogs as w, exp_weblog_fields as f 
+			WHERE w.field_group = f.group_id 
+			AND w.site_id = '".$DB->escape_str($site)."' 
+			AND f.field_type = 'date' 
+			ORDER BY w.blog_title ASC,f.field_order ASC");
+		
+		// Only grab settings for the current site (if they exist)
+		$current = (array_key_exists($site, $current)) ? $current[$site] : array();
+				
 		// Start building the page
 		$DSP->crumbline = TRUE;
 		
@@ -80,7 +89,7 @@ class Eevent_helper
 		$DSP->body .=   $DSP->tr_c().'</tbody>';
 		
 		// How many event weblogs do we have settings for?
-		$total = (empty($current)) ? 1 : count($current['event_weblog']);
+		$total = ( array_key_exists('event_weblog', $current) && !empty($current['event_weblog']) ) ? count($current['event_weblog']) : 1;
 		// Start at 1
 		$count = 1;
 		// Settings array starts at 0
@@ -96,9 +105,12 @@ class Eevent_helper
 			
 			$DSP->body .=   $DSP->td('tableCellOne');
 			$DSP->body .=   $DSP->input_select_header('event_weblog[]');
-			foreach($weblogs as $id => $title)
+			$DSP->body .=	$DSP->input_select_option('', '--');
+			foreach($weblogs->result as $value)
 			{
-				$DSP->body .= $DSP->input_select_option($id, $title, ( isset($current['event_weblog'][$i]) && $current['event_weblog'][$i] == $id ) ? 1 : '');
+				extract($value);
+				$DSP->body .= $DSP->input_select_option($weblog_id, $blog_title, 
+				( isset($current['event_weblog'][$i]) && $current['event_weblog'][$i] == $weblog_id ) ? 1 : '');
 			}
 			$DSP->body .=   $DSP->input_select_footer();
 			$DSP->body .=   $DSP->td_c();
@@ -113,9 +125,11 @@ class Eevent_helper
 			$DSP->body .=   $DSP->td('tableCellTwo');
 			$DSP->body .=   $DSP->input_select_header('start_date_field[]');
 			$DSP->body .=	$DSP->input_select_option('', $LANG->line('use_entry_date'));
-			foreach($fields as $id => $title)
+			foreach($fields->result as $value)
 			{
-				$DSP->body .= $DSP->input_select_option($id, $title, ( isset($current['start_date_field'][$i]) && $current['start_date_field'][$i] == $id ) ? 1 : '');
+				extract($value);
+				$DSP->body .= $DSP->input_select_option($field_id, $blog_title.': '.$field_label, 
+					( isset($current['start_date_field'][$i]) && $current['start_date_field'][$i] == $field_id ) ? 1 : '');
 			}
 			$DSP->body .=   $DSP->input_select_footer();
 			$DSP->body .=   $DSP->td_c();
@@ -130,9 +144,11 @@ class Eevent_helper
 			$DSP->body .=   $DSP->td('tableCellOne');
 			$DSP->body .=   $DSP->input_select_header('end_date_field[]');
 			$DSP->body .=	$DSP->input_select_option('', $LANG->line('none'));
-			foreach($fields as $id => $title)
+			foreach($fields->result as $value)
 			{
-				$DSP->body .= $DSP->input_select_option($id, $title, ( isset($current['end_date_field'][$i]) && $current['end_date_field'][$i] == $id ) ? 1 : '');
+				extract($value);
+				$DSP->body .= $DSP->input_select_option($field_id, $blog_title.': '.$field_label, 
+					( isset($current['end_date_field'][$i]) && $current['end_date_field'][$i] == $field_id ) ? 1 : '');
 			}
 			$DSP->body .=   $DSP->input_select_footer();
 			$DSP->body .=   $DSP->td_c();
@@ -146,8 +162,10 @@ class Eevent_helper
 			
 			$DSP->body .=   $DSP->td('tableCellTwo');
 			$DSP->body .=   $DSP->input_select_header('clone_date[]');			
-			$DSP->body .= 	$DSP->input_select_option('yes', $LANG->line('yes'), ( isset($current['clone_date'][$i]) && $current['clone_date'][$i] == 'yes' ) ? 1 : '');
-			$DSP->body .= 	$DSP->input_select_option('no', $LANG->line('no'), ( isset($current['clone_date'][$i]) && $current['clone_date'][$i] == 'no' ) ? 1 : '');
+			$DSP->body .= 	$DSP->input_select_option('yes', $LANG->line('yes'), 
+				( isset($current['clone_date'][$i]) && $current['clone_date'][$i] == 'yes' ) ? 1 : '');
+			$DSP->body .= 	$DSP->input_select_option('no', $LANG->line('no'), 
+				( isset($current['clone_date'][$i]) && $current['clone_date'][$i] == 'no' ) ? 1 : '');
 			$DSP->body .=   $DSP->input_select_footer();
 			$DSP->body .=   $DSP->td_c();
 			$DSP->body .=   $DSP->tr_c();
@@ -160,8 +178,10 @@ class Eevent_helper
 			
 			$DSP->body .=   $DSP->td('tableCellOne');
 			$DSP->body .=   $DSP->input_select_header('midnight[]');			
-			$DSP->body .= 	$DSP->input_select_option('yes', $LANG->line('yes'), ( isset($current['midnight'][$i]) && $current['midnight'][$i] == 'yes' ) ? 1 : '');
-			$DSP->body .= 	$DSP->input_select_option('no', $LANG->line('no'), ( isset($current['midnight'][$i]) && $current['midnight'][$i] == 'no' ) ? 1 : '');
+			$DSP->body .= 	$DSP->input_select_option('yes', $LANG->line('yes'), 
+				( isset($current['midnight'][$i]) && $current['midnight'][$i] == 'yes' ) ? 1 : '');
+			$DSP->body .= 	$DSP->input_select_option('no', $LANG->line('no'), 
+				( isset($current['midnight'][$i]) && $current['midnight'][$i] == 'no' ) ? 1 : '');
 			$DSP->body .=   $DSP->input_select_footer();
 			$DSP->body .=   $DSP->td_c();
 			$DSP->body .=   $DSP->tr_c();
@@ -174,8 +194,10 @@ class Eevent_helper
 			
 			$DSP->body .=   $DSP->td('tableCellTwo');
 			$DSP->body .=   $DSP->input_select_header('remove_localization[]');			
-			$DSP->body .= 	$DSP->input_select_option('yes', $LANG->line('yes'), ( isset($current['remove_localization'][$i]) && $current['remove_localization'][$i] == 'yes' ) ? 1 : '');
-			$DSP->body .= 	$DSP->input_select_option('no', $LANG->line('no'), ( isset($current['remove_localization'][$i]) && $current['remove_localization'][$i] == 'no' ) ? 1 : '');
+			$DSP->body .= 	$DSP->input_select_option('yes', $LANG->line('yes'), 
+				( isset($current['remove_localization'][$i]) && $current['remove_localization'][$i] == 'yes' ) ? 1 : '');
+			$DSP->body .= 	$DSP->input_select_option('no', $LANG->line('no'), 
+				( isset($current['remove_localization'][$i]) && $current['remove_localization'][$i] == 'no' ) ? 1 : '');
 			$DSP->body .=   $DSP->input_select_footer();
 			$DSP->body .=   $DSP->td_c();
 			$DSP->body .=   $DSP->tr_c();				
@@ -188,8 +210,10 @@ class Eevent_helper
 			
 			$DSP->body .=   $DSP->td('tableCellOne');
 			$DSP->body .=   $DSP->input_select_header('default_localization[]');			
-			$DSP->body .= 	$DSP->input_select_option('n', $LANG->line('Fixed'), ( isset($current['default_localization'][$i]) && $current['default_localization'][$i] == 'n' ) ? 1 : '');
-			$DSP->body .= 	$DSP->input_select_option('y', $LANG->line('Localized'), ( isset($current['default_localization'][$i]) && $current['default_localization'][$i] == 'y' ) ? 1 : '');
+			$DSP->body .= 	$DSP->input_select_option('n', $LANG->line('Fixed'), 
+				( isset($current['default_localization'][$i]) && $current['default_localization'][$i] == 'n' ) ? 1 : '');
+			$DSP->body .= 	$DSP->input_select_option('y', $LANG->line('Localized'), 
+				( isset($current['default_localization'][$i]) && $current['default_localization'][$i] == 'y' ) ? 1 : '');
 			$DSP->body .=   $DSP->input_select_footer();
 			$DSP->body .=   $DSP->td_c();
 			$DSP->body .=   $DSP->tr_c();
@@ -223,9 +247,16 @@ class Eevent_helper
 	
 	function save_settings()
 	{
-		global $DB;
+		global $DB, $PREFS;
+
+		$site = $PREFS->ini('site_id');		
 		
-		$settings = array(
+		$settings = $this->get_settings(TRUE);
+		
+		// Remove dummy setting
+		if(array_key_exists(0, $settings)) unset($settings[0]);
+		
+		$settings[$site] = array(
 			'event_weblog' => $_POST['event_weblog'],
 			'start_date_field' => $_POST['start_date_field'],
 			'end_date_field' => $_POST['end_date_field'],
@@ -239,15 +270,36 @@ class Eevent_helper
 		$update = $DB->update_string('exp_extensions', $data, "class = 'Eevent_helper'");
 		$DB->query($update);
 	}
+
+	
+	function get_settings($all_sites = FALSE)
+	{
+		global $DB, $PREFS, $REGX;
+		$site = $PREFS->ini('site_id');
+
+		$get_settings = $DB->query("SELECT settings FROM exp_extensions WHERE class = 'Eevent_helper' LIMIT 1");
+		if ($get_settings->num_rows > 0 && $get_settings->row['settings'] != '')
+        {
+        	$settings = $REGX->array_stripslashes(unserialize($get_settings->row['settings']));
+        	$settings = ($all_sites == TRUE) ? $settings : $settings[$site];
+        }
+        else
+        {
+        	$settings = array();
+        }
+        return $settings;		
+	}	
 	
 	
 	function is_event_weblog()
 	{
-		global $IN;
-		// Have we saved our settings?
-		if(!empty($this->settings))
+		global $IN, $PREFS;
+		$site = $PREFS->ini('site_id');
+
+		// Have we saved our settings for this site?
+		if(array_key_exists($site, $this->settings))
 		{
-			$key = array_search($IN->GBL('weblog_id'), $this->settings['event_weblog']);
+			$key = array_search($IN->GBL('weblog_id'), $this->settings[$site]['event_weblog']);
 			// Are we on a publish screen, and in our events weblog?
 			if( $IN->GBL('M') == ('entry_form' || 'new_entry' || 'edit_entry') && $key !== FALSE )
 			{
@@ -267,20 +319,30 @@ class Eevent_helper
 	
 	
 	function submit_new_entry_start() {
+	
+		global $PREFS;
 		
 		$key = $this->is_event_weblog();
 
 		if($key !== FALSE)
 		{
+			$settings = $this->get_settings();
+			
+			$midnight = $settings['midnight'][$key];
+			$start_date = (isset($settings['start_date_field'][$key]) && !empty($settings['start_date_field'][$key])) ? 
+				'field_id_'.$settings['start_date_field'][$key] : '';
+			$end_date = (isset($settings['end_date_field'][$key]) && !empty($settings['end_date_field'][$key])) ? 
+				'field_id_'.$settings['end_date_field'][$key] : '';
+			$clone = $settings['clone_date'][$key];
+			
 			// Are we zeroing the time?
-			if($this->settings['midnight'][$key] == 'yes')
+			if($midnight == 'yes')
 			{
 				// Zero the appropriate start date
-				if($this->settings['start_date_field'][$key] && $_POST[$this->settings['start_date_field'][$key]])
+				if($start_date && $_POST[$start_date])
 				{
 					// We submitted a custom start date
-					$_POST[$this->settings['start_date_field'][$key]] = 
-					substr($_POST[$this->settings['start_date_field'][$key]], 0, 10) . ' 00:00:00';
+					$_POST[$start_date] = substr($_POST[$start_date], 0, 10) . ' 00:00:00';
 				}
 				else
 				{
@@ -289,40 +351,36 @@ class Eevent_helper
 				}
 				
 				// Zero the end date if applicable
-				if($this->settings['end_date_field'][$key] && $_POST[$this->settings['end_date_field'][$key]])
+				if($end_date && $_POST[$end_date])
 				{
-					$_POST[$this->settings['end_date_field'][$key]] = 
-					substr($_POST[$this->settings['end_date_field'][$key]], 0, 10) . ' 00:00:00';
+					$_POST[$end_date] = substr($_POST[$end_date], 0, 10) . ' 00:00:00';
 				}
 			}
 		
 			// Set the expiration date
-			if($this->settings['end_date_field'][$key] && 
-			$_POST[$this->settings['end_date_field'][$key]]) // We're using an end date
+			if($end_date && $_POST[$end_date]) // We're using an end date
 			{ 
-				$_POST['expiration_date'] = 
-				substr($_POST[$this->settings['end_date_field'][$key]], 0, 10) . ' 23:59:59';
+				$_POST['expiration_date'] = substr($_POST[$end_date], 0, 10) . ' 23:59:59';
 			}
 			else
 			{ 
-				if($this->settings['start_date_field'][$key]) // We're using a custom start date
+				if($start_date) // We're using a custom start date
 				{
-					if($_POST[$this->settings['start_date_field'][$key]]) // Make sure we have a date
+					if($_POST[$start_date]) // Make sure we have a date
 					{
-						$_POST['expiration_date'] = 
-						substr($_POST[$this->settings['start_date_field'][$key]], 0, 10) . ' 23:59:59';
+						$_POST['expiration_date'] = substr($_POST[$start_date], 0, 10) . ' 23:59:59';
 					}
 				}
 				else // We're using the entry_date
 				{
-				$_POST['expiration_date'] = substr($_POST['entry_date'], 0, 10) . ' 23:59:59';
+					$_POST['expiration_date'] = substr($_POST['entry_date'], 0, 10) . ' 23:59:59';
 				}
 			}
 			
 			// Clone start date to entry date
-			if($this->settings['clone_date'][$key] == 'yes' && $this->settings['start_date_field'][$key] && $_POST[$this->settings['start_date_field'][$key]])
+			if($clone == 'yes' && $start_date && $_POST[$start_date])
 			{
-				$_POST['entry_date'] = $_POST[$this->settings['start_date_field'][$key]];
+				$_POST['entry_date'] = $_POST[$start_date];
 			}
 		}	
 	}	
@@ -336,26 +394,34 @@ class Eevent_helper
 	function show_full_control_panel_end($out)
 	{
 
-		global $EXT;
-		if ($EXT->last_call !== FALSE)
-		{
-			$out = $EXT->last_call;
-		}
-
+		global $EXT, $IN, $PREFS;
+		
+		$out = ($EXT->last_call !== FALSE) ? $EXT->last_call : $out;
+		
 		$key = $this->is_event_weblog();
 
 		if($key !== FALSE)
 		{
+			$settings = $this->get_settings();
+			
+			$start_date = (isset($settings['start_date_field'][$key]) && !empty($settings['start_date_field'][$key])) ? 
+				'field_id_'.$settings['start_date_field'][$key] : '';
+			$end_date = (isset($settings['end_date_field'][$key]) && !empty($settings['end_date_field'][$key])) ? 
+				'field_id_'.$settings['end_date_field'][$key] : '';
+			$midnight = $settings['midnight'][$key];
+			$remove = $settings['remove_localization'][$key];
+			$default = $settings['default_localization'][$key];
+			
 			// Remove the localization toggle
-			if($this->settings['remove_localization'][$key] == 'yes')
+			if($remove == 'yes')
 			{
 				// Regex courtesy of Lodewijk Schutte from his Low CP extension
-				$out = preg_replace('/<select name=\'(field_offset_\d+)\'.*?<\/select>/is', '<input type="hidden" name="$1" value="' . $this->settings['default_localization'][$key] . '" />', $out);
+				$out = preg_replace('/<select name=\'(field_offset_\d+)\'.*?<\/select>/is', '<input type="hidden" name="$1" value="' . $default . '" />', $out);
 			}
 			
 			
-			// Hide the time if specified
-			if($this->settings['midnight'][$key] == 'yes')
+			// JavaScript for hiding the time
+			if($midnight == 'yes')
 			{
 				$target = "</head>";
 				$js = '
@@ -365,10 +431,10 @@ class Eevent_helper
 				jQuery(document).ready(function($)
 					{
 					';
-				if($start = $this->settings['start_date_field'][$key])
+				if($start_date)
 				{
-					$js .= '$("input[name='.$start.']").attr("maxlength", "10")
-                    $("input[name='.$start.']").val($("input[name='.$start.']").val().substr(0,10));
+					$js .= '$("input[name='.$start_date.']").attr("maxlength", "10")
+                    $("input[name='.$start_date.']").val($("input[name='.$start_date.']").val().substr(0,10));
 					';
 				}
 				else
@@ -377,10 +443,10 @@ class Eevent_helper
                     $("input[name=entry_date]").val($("input[name=entry_date]").val().substr(0,10));
 					';
 				}
-				if($end = $this->settings['end_date_field'][$key])
+				if($end_date)
 				{
-					$js .= '$("input[name='.$end.']").attr("maxlength", "10")
-                    $("input[name='.$end.']").val($("input[name='.$end.']").val().substr(0,10));
+					$js .= '$("input[name='.$end_date.']").attr("maxlength", "10")
+                    $("input[name='.$end_date.']").val($("input[name='.$end_date.']").val().substr(0,10));
 					';
 				}
 				$js .= '}
@@ -394,8 +460,7 @@ class Eevent_helper
 		}
 		
 		// Javascript for Extension settings page
-		if( isset($_GET['P']) && $_GET['P'] == 'extension_settings' 
-			&& isset($_GET['name']) && $_GET['name'] == 'eevent_helper')
+		if( $IN->GBL('P') == 'extension_settings' && $IN->GBL('name') == 'eevent_helper' )
 		{
 			$js = '
 				<script type="text/javascript">
@@ -466,7 +531,7 @@ class Eevent_helper
 			        'class'        => "Eevent_helper",
 			        'method'       => $method,
 			        'hook'         => $hook,
-			        'settings'     => '',
+			        'settings'     => serialize(array(0)),
 			        'priority'     => 10,
 			        'version'      => $this->version,
 			        'enabled'      => "y"
@@ -491,9 +556,17 @@ class Eevent_helper
 	        return FALSE;
 	    }
 	    
+	    if($current < '1.2')
+	    {
+	    	// Settings format has changed, so zero it out.  Sorry!
+	    	$DB->query("UPDATE exp_extensions 
+	    		SET settings = '".serialize(array(0))."' 
+	    		WHERE class = 'Eevent_helper'");
+	    }
+	    
 	    $DB->query("UPDATE exp_extensions 
-	                SET version = '".$DB->escape_str($this->version)."' 
-	                WHERE class = 'Eevent_helper'");
+	    		SET version = '".$DB->escape_str($this->version)."' 
+	    		WHERE class = 'Eevent_helper'");
 	}
 	// END
 	
