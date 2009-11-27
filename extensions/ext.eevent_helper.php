@@ -9,7 +9,7 @@ class Eevent_helper
 {
 	var $settings        = array();
 	var $name            = 'EEvent Helper';
-	var $version         = '1.2';
+	var $version         = '1.2.1';
 	var $description     = 'Automatically sets the expiration date for event entries, and more.';
 	var $settings_exist  = 'y';
 	var $docs_url        = 'http://github.com/amphibian/ext.eevent_helper.ee_addon';
@@ -301,7 +301,7 @@ class Eevent_helper
 		{
 			$key = array_search($IN->GBL('weblog_id'), $this->settings[$site]['event_weblog']);
 			// Are we on a publish screen, and in our events weblog?
-			if( $IN->GBL('M') == ('entry_form' || 'new_entry' || 'edit_entry') && $key !== FALSE )
+			if( ($IN->GBL('M') == 'entry_form' || $IN->GBL('M') == 'new_entry' || $IN->GBL('M') == 'edit_entry') && $key !== FALSE )
 			{
 				// Return the array key which contains this weblog's settings
 				return $key;
