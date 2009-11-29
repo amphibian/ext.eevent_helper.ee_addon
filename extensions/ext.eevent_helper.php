@@ -71,7 +71,9 @@ class Eevent_helper
 		
 		$DSP->right_crumb($LANG->line('disable_extension'), BASE.AMP.'C=admin'.AMP.'M=utilities'.AMP.'P=toggle_extension_confirm'.AMP.'which=disable'.AMP.'name='.$IN->GBL('name'));
 		
-		$DSP->body = $DSP->form_open(
+		$DSP->body = $DSP->heading($this->name.NBS.$DSP->qspan('defaultLight', $this->version), 1);		
+		
+		$DSP->body .= $DSP->form_open(
 			array(
 				'action' => 'C=admin'.AMP.'M=utilities'.AMP.'P=save_extension_settings',
 				'name'   => 'eevent_helper',
@@ -83,8 +85,8 @@ class Eevent_helper
 		// Open the table
 		$DSP->body .=   $DSP->table('tableBorder', '0', '', '100%');
 		$DSP->body .=   '<tbody>'.$DSP->tr();
-		$DSP->body .=   $DSP->td('tableHeadingAlt', '', '2');
-		$DSP->body .=   $this->name;
+		$DSP->body .=   $DSP->td('tableHeading', '', '2');
+		$DSP->body .=   $LANG->line('events').' '.$PREFS->core_ini['weblog_nomenclature'].'s';
 		$DSP->body .=   $DSP->td_c();
 		$DSP->body .=   $DSP->tr_c().'</tbody>';
 		

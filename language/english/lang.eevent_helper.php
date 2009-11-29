@@ -4,6 +4,7 @@ global $PREFS;
 
 $L = array(
 
+'events' => 'Events',
 'event_weblog' => 'Choose an events ' . $PREFS->core_ini['weblog_nomenclature'],
 'start_date_field' => 'Choose a Start Date field',
 'use_entry_date' => 'Use Entry Date',
