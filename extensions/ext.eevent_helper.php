@@ -9,7 +9,7 @@ class Eevent_helper
 {
 	var $settings        = array();
 	var $name            = 'EEvent Helper';
-	var $version         = '1.2.1';
+	var $version         = '1.2.2';
 	var $description     = 'Automatically sets the expiration date for event entries, and more.';
 	var $settings_exist  = 'y';
 	var $docs_url        = 'http://github.com/amphibian/ext.eevent_helper.ee_addon';
@@ -293,7 +293,7 @@ class Eevent_helper
 	}	
 	
 	
-	function is_event_weblog()
+	function is_event_weblog($type = '')
 	{
 		global $IN, $PREFS;
 		$site = $PREFS->ini('site_id');
@@ -301,17 +301,18 @@ class Eevent_helper
 		// Have we saved our settings for this site?
 		if(array_key_exists($site, $this->settings))
 		{
+			// Find which index in the array we want to take our settings from
 			$key = array_search($IN->GBL('weblog_id'), $this->settings[$site]['event_weblog']);
-			// Are we on a publish screen, and in our events weblog?
-			if( ($IN->GBL('M') == 'entry_form' || $IN->GBL('M') == 'new_entry' || $IN->GBL('M') == 'edit_entry') && $key !== FALSE )
+			
+			// If we only want to do stuff on the publish screen, we need some additional checks
+			if($type == 'display')
 			{
-				// Return the array key which contains this weblog's settings
-				return $key;
+				if($IN->GBL('M') != 'entry_form' && $IN->GBL('M') != 'new_entry' && $IN->GBL('M') != 'edit_entry')
+				{
+					$key = FALSE;	
+				}
 			}
-			else
-			{
-				return FALSE;
-			}
+			return $key;
 		}
 		else
 		{
@@ -400,7 +401,7 @@ class Eevent_helper
 		
 		$out = ($EXT->last_call !== FALSE) ? $EXT->last_call : $out;
 		
-		$key = $this->is_event_weblog();
+		$key = $this->is_event_weblog('display');
 
 		if($key !== FALSE)
 		{
@@ -522,6 +523,7 @@ class Eevent_helper
 	    
 	    $hooks = array(
 	    	'submit_new_entry_start' => 'submit_new_entry_start',
+	    	'weblog_standalone_insert_entry' => 'submit_new_entry_start',
 	    	'show_full_control_panel_end' => 'show_full_control_panel_end'
 	    );
 	    
@@ -565,7 +567,27 @@ class Eevent_helper
 	    		SET settings = '".serialize(array(0))."' 
 	    		WHERE class = 'Eevent_helper'");
 	    }
-	    
+
+	    if($current < '1.2.2')
+	    {
+	    	$settings = $this->get_settings(TRUE);
+	    	
+	    	// Add compatibility with SAEFs
+	    	$DB->query($DB->insert_string('exp_extensions',
+		    	array(
+					'extension_id' => '',
+			        'class'        => "Eevent_helper",
+			        'method'       => 'submit_new_entry_start',
+			        'hook'         => 'weblog_standalone_insert_entry',
+			        'settings'     => serialize($settings),
+			        'priority'     => 10,
+			        'version'      => $this->version,
+			        'enabled'      => "y"
+					)
+				)
+			);
+	    }
+	    	    
 	    $DB->query("UPDATE exp_extensions 
 	    		SET version = '".$DB->escape_str($this->version)."' 
 	    		WHERE class = 'Eevent_helper'");
