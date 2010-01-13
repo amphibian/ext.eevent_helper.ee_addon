@@ -255,9 +255,6 @@ class Eevent_helper
 		
 		$settings = $this->get_settings(TRUE);
 		
-		// Remove dummy setting
-		if(array_key_exists(0, $settings)) unset($settings[0]);
-		
 		$settings[$site] = array(
 			'event_weblog' => $_POST['event_weblog'],
 			'start_date_field' => $_POST['start_date_field'],
@@ -430,8 +427,7 @@ class Eevent_helper
 				$js = '
 				<script type="text/javascript">
 				<!-- Added by EEvent Helper -->
-				jQuery.noConflict();
-				jQuery(document).ready(function($)
+				$(document).ready(function()
 					{
 					';
 				if($start_date)
@@ -468,8 +464,7 @@ class Eevent_helper
 			$js = '
 				<script type="text/javascript">
 				<!-- Added by EEvent Helper -->
-				jQuery.noConflict();
-				jQuery(document).ready(function($)
+				$(document).ready(function()
 					{
 					
 					function countPanels()
